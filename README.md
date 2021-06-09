@@ -8,6 +8,11 @@ Should you have any question, suggestion, problem, feel free to contact me to lc
 
 CHANGELOG
 
+v1.2
+- Moved the permutation to each password generation for more randomness
+- Added "other special characters", that include greek letters
+- Added quick config
+
 v1.1
 - Added "ranged password generation" (generate passwords with a size in a given range)
 - Added estimated time to crack a password given his profile (calculus function, part "a bit of math")
