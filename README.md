@@ -4,7 +4,7 @@ your needs.
 
 The use is, I think, pretty intuitive. The settings editing is explained in detail.
 
-Should you have any question, suggestion, problem, feel free to contact me to lcram33@pm.me or on discord (Lcram33#7313).
+Should you have any question, suggestion, problem, feel free to contact me to lcram33@pm.me or open an issue.
 
 CHANGELOG
 
