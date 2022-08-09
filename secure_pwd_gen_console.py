@@ -1,6 +1,6 @@
 from secure_pwd_gen_api import *
 import json
-from math import log
+from math import log, factorial
 from os import get_terminal_size
 
 config = {}
@@ -79,8 +79,6 @@ def get_config():
             print("Config successfully loaded !")
     except Exception:
         print("No config file found, or missing permissions to read it. Setting up default configuration (usual config, see settings section for more details).")
-
-        global usual_config
         config = usual_config
 
 def clean_string(str_input, allowed_chars, to_upper = False, to_lower = False):
@@ -137,12 +135,7 @@ def edit_chain(old_set, data):
 
 def change_config():
     global config
-    global default_ints
-    global default_lowers
-    global default_special_chars
-    global default_uncommon_special_chars
-    global default_uppers
-
+    
     print_separator()
     print("CONFIG")
     print("1. Quick setup")
@@ -164,11 +157,6 @@ def change_config():
         return
 
     if choice == 1:
-        global simple_config
-        global usual_config
-        global strong_config
-        global very_strong_config
-
         print("""
 READ THIS BEFORE MAKING YOUR CHOICE
 
@@ -471,8 +459,6 @@ The default values are : 8-40.
 
 
 def generate_passwords():
-    global config
-
     choice = input(f"Should I use the default settings ? Current {config['default']} (in order : use uppercases, lowercases, digits, special character, uncommon special characters) : (y/n) ")
     settings = ""
     if choice == 'y':
@@ -531,8 +517,6 @@ def generate_passwords():
         print('-'*line_size)
 
 def generate_passphrases():
-    global config
-
     wordlist = load_wordlist('wordlist.json')
 
     choice = input(f"Should I use the default settings ? Current : separator is {config['passphrase_separator']}, number of words is {config['passphrase_lenght']} : (y/n) ")
@@ -567,8 +551,6 @@ def generate_passphrases():
         print('-'*line_size)
 
 def generate_quotephrases():
-    global config
-
     quote_dict = load_wordlist('quotes.json')
 
     choice = input(f"Should I use the default settings ? Current : separator is {config['passphrase_separator']}, use acronyms : {config['acronyms']} : (y/n) ")
@@ -604,12 +586,7 @@ def generate_quotephrases():
 
 
 def calculus():
-    global config
-
-    choice = input("Password (1) or passphrase (2) ? ")
-    if choice not in ['1', '2']:
-        print("Invalid answer.")
-        return
+    choice = input("Password (1), passphrase (2) or quotephrase (3) ? ")
 
     if choice == '1':
         choice = input(f"Should I use the default settings ? Current : {config['default']} (in order : use uppercases, lowercases, digits, special characters, uncommon special characters) : (y/n) ")
@@ -662,11 +639,10 @@ def calculus():
 
         print("How long would it be to crack such a password ? Assuming the attacker can perfom a billion check per seconds, your password may last...")
         print(convert_duration(round(2**(bits_of_entropy-1) / (10 ** 9))))
-    else:
+    elif choice == '2':
         wordlist = load_wordlist('wordlist.json')
 
         choice = input(f"Should I use the default settings ? Current : number of words is {config['passphrase_lenght']} : (y/n) ")
-        lenght = 0
 
         if choice == 'y':
             lenght = config["passphrase_lenght"]
@@ -691,6 +667,41 @@ def calculus():
 
         print("How long would it be to crack such a passphrase ? Assuming the attacker can perfom a billion check per seconds, your passphrase may last...")
         print(convert_duration(round(2**(bits_of_entropy-1) / (10 ** 9))))
+    elif choice == '3':
+        quote_dict = load_wordlist('quotes.json')
+
+        choice = input(f"Should I use the default settings ? Current : use acronyms : {config['acronyms']} : (y/n) ")
+        
+        if choice == 'y':
+            use_acronym = config['acronyms']
+        else:
+            use_acronym = input("Use acronyms ? (y/n) ")
+        
+        use_acronym = True if use_acronym == 'y' else False
+
+        n = len(quote_dict)
+        if use_acronym:
+            average_number_of_words_in_quotes = round(sum(len(x.split('-')) for x in quote_dict)/n) #we don't add 1 as the round can be an upper round
+            q = average_number_of_words_in_quotes #we take an average, so this is an estimate
+    
+            possibilities_for_words_position = factorial(q) #permutation
+
+            p = 2 #we use two quotes
+            number_of_possible_quotes_selection = factorial(n)/factorial(n-2) #partial permutation
+
+            bits_of_entropy = round(log(number_of_possible_quotes_selection * possibilities_for_words_position, 2), 1)
+        else:
+            bits_of_entropy = round(log(n, 2), 1)
+
+        print(f"Strenght of your quotephrase : {bits_of_entropy} bits of entropy.")
+        print("This is a lower bound as we do not take into account the separator.")
+        print("What does it means ?")
+        print(f"That the possible number of passphrases according your settings is about 2^{bits_of_entropy}.")
+
+        print("How long would it be to crack such a passphrase ? Assuming the attacker can perfom a billion check per seconds, your passphrase may last...")
+        print(convert_duration(round(2**(bits_of_entropy-1) / (10 ** 9))))
+    else:
+        print("Invalid choice !")
 
 
 def main():

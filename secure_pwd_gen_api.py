@@ -44,7 +44,6 @@ def new_password(size, chars):
 
     return newpass
 
-
 def new_passords(sizes, chars):
     passwords = list()
     for i in range(len(sizes)):
@@ -96,7 +95,6 @@ def new_quotephrase(quotedict, separator, use_acronym, only_quotephrase = False)
         output['acronym_from'] = quotedict[acronym_picked]['from']
     
     return output['quote'] if only_quotephrase else output
-        
 
 def new_quotephrases(quotedict, separator, use_acronym, amount, only_quotephrase = False):
     quotephrases = list()
