@@ -16,4 +16,4 @@ def txt_wordlist_to_json(path, save_path):
 
 
 #convert to json, if not done yet
-txt_wordlist_to_json('en_wordlist.txt', 'wordlist.json')
+txt_wordlist_to_json('fr_wordlist.txt', 'wordlist.json')

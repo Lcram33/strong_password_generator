@@ -5,7 +5,7 @@ https://github.com/dwyl/quotes/blob/main/quotes.json
 https://github.com/vinitshahdeo/inspirational-quotes/blob/master/data/data.json
 https://github.com/NikhilNamal17/popular-movie-quotes/blob/master/data/data.json
 
-Thanks to those who compiled thoses lists :)
+Thanks to the ones who compiled thoses lists :)
 """
 
 

@@ -3,6 +3,10 @@ import json
 from math import log, factorial
 from os import get_terminal_size
 
+
+AMOUNT = 6
+MINIMUM_ENTROPY = 75
+
 config = {}
 default_uppers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 default_lowers = "abcdefghijklmnopqrstuvwxyz"
@@ -69,6 +73,18 @@ very_strong_config = {
 
 def print_separator():
     print('-' * get_terminal_size().columns)
+
+def print_warning():
+    print(f"""
+      .             
+     / \            
+    /   \           |
+   /  |  \          | WARNING : THE PASSWORDS GENERATED WITH THIS CONFIGURATION SHOULD BE CONSIDERED WEAK
+  /   |   \         | (< {MINIMUM_ENTROPY} bits of entropy) AND THEREFORE SHOULD NOT BE USED IF BRUTE-FORCE ATTACK MAY BE
+ /         \        | PERFORMED. See calculus part for more details.                              
+/     o     \       |
+-------------""")
+    input("<Press ↵/Enter to continue>")
 
 def get_config():
     global config
@@ -189,16 +205,7 @@ Several configurations are available :
             return
 
         if config_choice == 1:
-            if input("""
----------------------------------------------------------------------------------------
-| WARNING : THE PASSWORDS GENERATED WITH THIS CONFIGURATION SHOULD BE CONSIDERED WEAK |
-| AND THEREFORE SHOULD NOT BE USED IF BRUTE-FORCE ATTACK MAY BE PERFORMED.            |
----------------------------------------------------------------------------------------
-Set anyway ? (y/n)
-            """) == 'y':
-                config = simple_config
-            else:
-                return
+            config = simple_config
         elif config_choice == 2:
             config = usual_config
         elif config_choice == 3:
@@ -489,8 +496,6 @@ def generate_passwords():
         print("You must choose at least one type of characters.")
         return
 
-    amount = 6
-
     size = input("How long do you want your password ? (r for randomly sized passwords) : ")
     sizes = []
     if size != "r":
@@ -504,9 +509,14 @@ def generate_passwords():
             print("The size must be between 3 and 200 (included).")
             return
 
-        sizes = [size for i in range(amount)]
+        sizes = [size for i in range(AMOUNT)]
     else:
-        sizes = [random_range(config["range_min"], config["range_max"]) for i in range(amount)]
+        sizes = [random_range(config["range_min"], config["range_max"]) for i in range(AMOUNT)]
+
+    size = min(sizes)
+    bits_of_entropy = calculate_entropy("password", settings, size)
+    if bits_of_entropy is not None and bits_of_entropy < MINIMUM_ENTROPY:
+        print_warning()
 
     passwords = new_passords(sizes, chars)
     line_size = max(len(x) for x in passwords)
@@ -540,9 +550,11 @@ def generate_passphrases():
             print("The lenght must be between 3 and 200 (included).")
             return
 
-    amount = 6
+    bits_of_entropy = calculate_entropy("passphrase", '', lenght)
+    if bits_of_entropy is not None and bits_of_entropy < MINIMUM_ENTROPY:
+        print_warning()
 
-    passphrases = new_passphrases(wordlist, lenght, separator, amount)
+    passphrases = new_passphrases(wordlist, lenght, separator, AMOUNT)
     line_size = max([len(x) for x in passphrases])
 
     print('-'*line_size)
@@ -566,9 +578,11 @@ def generate_quotephrases():
 
     use_acronym = True if use_acronym == 'y' else False
 
-    amount = 6
+    bits_of_entropy = calculate_entropy("quotephrase", use_acronym, 0)
+    if bits_of_entropy is not None and bits_of_entropy < MINIMUM_ENTROPY:
+        print_warning()
 
-    quotesphrases = new_quotephrases(quote_dict, separator, use_acronym, amount)
+    quotesphrases = new_quotephrases(quote_dict, separator, use_acronym, AMOUNT)
     line_size = max(len(x['quote']) for x in quotesphrases)
 
     print('-'*line_size)
@@ -584,6 +598,47 @@ def generate_quotephrases():
 
         print('-'*line_size)
 
+
+def calculate_entropy(passtype, settings, size):
+    bits_of_entropy = None
+    if passtype == "password":
+        chars_len = 0
+        if settings[0] == 'y':
+            chars_len += len(config["uppers"])
+        if settings[1] == 'y':
+            chars_len += len(config["lowers"])
+        if settings[2] == 'y':
+            chars_len += len(config["ints"])
+        if settings[3] == 'y':
+            chars_len += len(config["special_chars"])
+        if settings[4] == 'y':
+            chars_len += len(config["uncommon_special_chars"])
+
+        if chars_len != 0:
+            bits_of_entropy = round(size * log(chars_len, 2), 1)
+    elif passtype == "passphrase":
+        wordlist = load_wordlist('wordlist.json')
+        bits_of_entropy = round(size * log(len(wordlist), 2), 1)
+    elif passtype == "quotephrase":
+        quote_dict = load_wordlist('quotes.json')
+       
+        use_acronym = True if settings == 'y' else False
+
+        n = len(quote_dict)
+        if use_acronym:
+            average_number_of_words_in_quotes = round(sum(len(x.split('-')) for x in quote_dict)/n) #we don't add 1 as the round can be an upper round
+            q = average_number_of_words_in_quotes #we take an average, so this is an estimate
+    
+            possibilities_for_words_position = factorial(q) #permutation
+
+            p = 2 #we use two quotes
+            number_of_possible_quotes_selection = factorial(n)/factorial(n-2) #partial permutation
+
+            bits_of_entropy = round(log(number_of_possible_quotes_selection * possibilities_for_words_position, 2), 1)
+        else:
+            bits_of_entropy = round(log(n, 2), 1)
+    
+    return bits_of_entropy
 
 def calculus():
     choice = input("Password (1), passphrase (2) or quotephrase (3) ? ")
@@ -604,22 +659,6 @@ def calculus():
                     return
                 settings += res
 
-        chars_len = 0
-        if settings[0] == 'y':
-            chars_len += len(config["uppers"])
-        if settings[1] == 'y':
-            chars_len += len(config["lowers"])
-        if settings[2] == 'y':
-            chars_len += len(config["ints"])
-        if settings[3] == 'y':
-            chars_len += len(config["special_chars"])
-        if settings[4] == 'y':
-            chars_len += len(config["uncommon_special_chars"])
-
-        if chars_len == 0:
-            print("You must choose at least one type of characters.")
-            return
-
         size = 0
         try:
             size = int(input("How long would your password be ? "))
@@ -631,17 +670,18 @@ def calculus():
             print("The size must be between 1 and 400 (included).")
             return
 
-        bits_of_entropy = round(size * log(chars_len, 2), 1)
+        bits_of_entropy = calculate_entropy("password", settings, size)
+        if bits_of_entropy is None:
+            print("You must choose at least one type of characters.")
+            return
 
         print(f"Strenght of your password : {bits_of_entropy} bits of entropy.")
         print("What does it means ?")
         print(f"That the possible number of passwords according your settings is about 2^{bits_of_entropy}.")
 
-        print("How long would it be to crack such a password ? Assuming the attacker can perfom a billion check per seconds, your password may last...")
-        print(convert_duration(round(2**(bits_of_entropy-1) / (10 ** 9))))
+        print("How long would it be to crack such a password ? Assuming the attacker can perfom 10 billion check per seconds, your password may last...")
+        print(convert_duration(round(2**(bits_of_entropy-1) / (10 ** 10))))
     elif choice == '2':
-        wordlist = load_wordlist('wordlist.json')
-
         choice = input(f"Should I use the default settings ? Current : number of words is {config['passphrase_lenght']} : (y/n) ")
 
         if choice == 'y':
@@ -659,17 +699,15 @@ def calculus():
                 print("The lenght must be between 3 and 200 (included).")
                 return
 
-        bits_of_entropy = round(lenght * log(len(wordlist), 2), 1)
+        bits_of_entropy = calculate_entropy("passphrase", '', lenght)
 
         print(f"Strenght of your passphrase : {bits_of_entropy} bits of entropy.")
         print("What does it means ?")
         print(f"That the possible number of passphrases according your settings is about 2^{bits_of_entropy}.")
 
-        print("How long would it be to crack such a passphrase ? Assuming the attacker can perfom a billion check per seconds, your passphrase may last...")
-        print(convert_duration(round(2**(bits_of_entropy-1) / (10 ** 9))))
+        print("How long would it be to crack such a passphrase ? Assuming the attacker can perfom 10 billion check per seconds, your passphrase may last...")
+        print(convert_duration(round(2**(bits_of_entropy-1) / (10 ** 10))))
     elif choice == '3':
-        quote_dict = load_wordlist('quotes.json')
-
         choice = input(f"Should I use the default settings ? Current : use acronyms : {config['acronyms']} : (y/n) ")
         
         if choice == 'y':
@@ -677,29 +715,15 @@ def calculus():
         else:
             use_acronym = input("Use acronyms ? (y/n) ")
         
-        use_acronym = True if use_acronym == 'y' else False
-
-        n = len(quote_dict)
-        if use_acronym:
-            average_number_of_words_in_quotes = round(sum(len(x.split('-')) for x in quote_dict)/n) #we don't add 1 as the round can be an upper round
-            q = average_number_of_words_in_quotes #we take an average, so this is an estimate
-    
-            possibilities_for_words_position = factorial(q) #permutation
-
-            p = 2 #we use two quotes
-            number_of_possible_quotes_selection = factorial(n)/factorial(n-2) #partial permutation
-
-            bits_of_entropy = round(log(number_of_possible_quotes_selection * possibilities_for_words_position, 2), 1)
-        else:
-            bits_of_entropy = round(log(n, 2), 1)
+        bits_of_entropy = calculate_entropy("quotephrase", use_acronym, 0)
 
         print(f"Strenght of your quotephrase : {bits_of_entropy} bits of entropy.")
         print("This is a lower bound as we do not take into account the separator.")
         print("What does it means ?")
         print(f"That the possible number of passphrases according your settings is about 2^{bits_of_entropy}.")
 
-        print("How long would it be to crack such a passphrase ? Assuming the attacker can perfom a billion check per seconds, your passphrase may last...")
-        print(convert_duration(round(2**(bits_of_entropy-1) / (10 ** 9))))
+        print("How long would it be to crack such a passphrase ? Assuming the attacker can perfom 10 billion check per seconds, your passphrase may last...")
+        print(convert_duration(round(2**(bits_of_entropy-1) / (10 ** 10))))
     else:
         print("Invalid choice !")
 
@@ -746,6 +770,7 @@ def main():
             choice = int(input("Choice ? "))
         except Exception:
             print("This choice is not valid.")
+            continue
 
         if choice == 1:
             generate_passwords()
